@@ -7,19 +7,19 @@ const server = http.createServer((req, res) => {
 
     switch (req.url) {
         case '/':
-            res.write('Главная страница');
+            res.write('Welcome to the home page!');
+            res.write('response: ' + requestCount);
             break;
         case '/about':
-            res.write('О нас');
-            break;
-        case '/contact':
-            res.write('Контакты');
+            res.write('This is the about page.');
+            break;      
+        case '/contact':    
+            res.write('Contact us at');
             break;
         default:
-            res.write('Страница не найдена');
+            res.write('404 Not Found');
+            return;
     }
-
-    res.write('Счтетчик запросов: ' + requestCount);
     res.end();
 });
 
