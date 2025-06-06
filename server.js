@@ -17,8 +17,8 @@ const server = http.createServer((req, res) => {
             res.write('Contact us at');
             break;
         default:
-            res.write('404 Not Found');
-            return;
+            res.write('DOLBAEB TAKOGO SAYTA NETU');
+            break;
     }
     res.end();
 });
