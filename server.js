@@ -1,26 +1,47 @@
 const http = require('http');
+const fs = require('fs');
 
-let requestCount = 0;
+const delay = (ms) => new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve();
+    }, ms);
+}); // Функция задержки
 
-const server = http.createServer((req, res) => {
-    requestCount++;
+const readFileAsync = (filePath) => new Promise((resolve, reject) => {
+    fs.readFile(filePath, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+    });
+}); // Чтение файла асинхронно
 
+const server = http.createServer(async (req, res) => {
     switch (req.url) {
         case '/':
-            res.write('Welcome to the home page!');
-            res.write('response: ' + requestCount);
-            break;
+            // Главная страница в файле index.html
+            try {
+                const data = await readFileAsync('index.html');  
+                res.write(data);
+                res.end();
+                break;
+            } catch (err) {
+                res.write('Internal Server Error');
+                res.end();
+            }
         case '/about':
+            await delay(3000);
             res.write('This is the about page.');
+            res.end();
             break;      
         case '/contact':    
             res.write('Contact us at');
+            res.end();
             break;
         default:
-            res.write('DOLBAEB TAKOGO SAYTA NETU');
+            // Обработка 404 ошибки
+            res.write('404 Not Found');
+            res.end();
             break;
     }
-    res.end();
 });
 
-server.listen(3000);
+server.listen(3000); // Запуск сервера на порту 3000
