@@ -51,14 +51,14 @@ async def gpt_pptx(request: Request, background_tasks: BackgroundTasks):
     for png_file in png_files:
         with open(png_file, "rb") as f:
             images.append("data:image/png;base64," + base64.b64encode(f.read()).decode())
-    def cleanup():
-        try:
-            for f in png_files:
-                os.remove(f)
-            os.rmdir(png_dir)
-        except Exception:
-            pass
-    background_tasks.add_task(cleanup)
+    # def cleanup():
+    #     try:
+    #         for f in png_files:
+    #             os.remove(f)
+    #         os.rmdir(png_dir)
+    #     except Exception:
+    #         pass
+    # background_tasks.add_task(cleanup)
     return JSONResponse({"images": images})
 
 @app.get("/download_last_pptx")
@@ -71,12 +71,12 @@ def download_last_pptx():
             filename="presentation.pptx",
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
         )
-        def cleanup():
-            try:
-                os.remove(pptx_path)
-            except Exception:
-                pass
-        import threading
-        threading.Thread(target=cleanup).start()
+        # def cleanup():
+        #     try:
+        #         os.remove(pptx_path)
+        #     except Exception:
+        #         pass
+        # import threading
+        # threading.Thread(target=cleanup).start()
         return response
     return JSONResponse({"error": "Файл не найден"}, status_code=404)
