@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="site-wrapper">
+        <div class="card">
+            <span class="bubble bubble1"></span>
+            <span class="bubble bubble2"></span>
+            <span class="bubble bubble3"></span>
+            <h1 id="main-title">Welcome to the Home Page</h1>
+            <div id="chat-window" class="chat-window" style="border:none; box-shadow:none; background:transparent;"></div>
+            <form id="chat-form" class="chat-form" autocomplete="off">
+                <input type="text" id="promptInput" placeholder="Введите сообщение..." class="input-text" autocomplete="off" />
+                <button type="submit" class="btn">Отправить</button>
+            </form>
+            <div id="pptx-preview" style="display:none; margin-top:1em;">
+                <!-- Здесь будут PNG-слайды -->
+            </div>
+            <button id="pptx-download-btn-final" class="btn" style="margin: 2em auto 0 auto; display: none;">Скачать презентацию</button>
+        </div>
+    </div>
+    <script>
+        let chatHistory = [];
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const promptInput = document.getElementById('promptInput');
+        const pptxPreview = document.getElementById('pptx-preview');
+        const pptxDownloadBtnFinal = document.getElementById('pptx-download-btn-final');
+        let pptxBlob = null;
+
+        function addMessage(role, text) {
+            chatHistory.push({role, text});
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message ' + (role === 'user' ? 'user' : 'assistant');
+            msgDiv.textContent = text;
+            chatWindow.appendChild(msgDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userText = promptInput.value.trim();
+            if (userText) {
+                addMessage('user', userText);
+                promptInput.value = '';
+                addMessage('assistant', '...');
+                const loadingMsg = chatWindow.lastChild;
+                try {
+                    const response = await fetch('/gpt', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({history: chatHistory}) // ВАЖНО!
+                    });
+                    if (response.ok) {
+                        // Получаем JSON с base64 PNG
+                        const data = await response.json();
+                        pptxPreview.style.display = 'block';
+                        loadingMsg.textContent = 'Презентация готова! Слайды ниже:';
+                        pptxPreview.innerHTML = '';
+                        const slidesDiv = document.createElement('div');
+                        slidesDiv.style.display = 'flex';
+                        slidesDiv.style.flexDirection = 'column';
+                        slidesDiv.style.gap = '12px';
+                        data.images.forEach(src => {
+                            const img = document.createElement('img');
+                            img.src = src;
+                            img.style.width = '100%';
+                            img.style.maxWidth = '600px';
+                            img.style.borderRadius = '12px';
+                            img.style.boxShadow = '0 2px 12px rgba(44,62,80,0.07)';
+                            slidesDiv.appendChild(img);
+                        });
+                        pptxPreview.appendChild(slidesDiv);
+
+                        // Получаем pptx-файл для скачивания
+                        const pptxResponse = await fetch('/download_last_pptx');
+                        if (pptxResponse.ok) {
+                            pptxBlob = await pptxResponse.blob();
+                            pptxDownloadBtnFinal.style.display = 'block';
+                        }
+                    } else {
+                        loadingMsg.textContent = 'Ошибка генерации презентации';
+                    }
+                } catch (err) {
+                    loadingMsg.textContent = "Ошибка соединения с сервером";
+                }
+            }
+        });
+
+        // Кнопка скачать презентацию
+        pptxDownloadBtnFinal.onclick = function() {
+            if (pptxBlob) {
+                const url = window.URL.createObjectURL(pptxBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "presentation.pptx";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+        };
+    </script>
+</body>
+</html>
