@@ -13,15 +13,31 @@ def get_gpt_plan(history):
         "Ты — помощник, который помогает создавать презентации. "
         "Отвечай только в формате JSON: [{'title':..., 'text':..., 'image':...}, ...]. "
         "Добавляй картинки к каждому слайду по теме. "
-        "Если пользователь исправляет или дополняет презентацию, учитывай всю историю диалога и свои предыдущие ответы, не повторяй уже сгенерированные части, а только исправляй или дополняй."
+        "Не добавляй пояснений, только JSON!"
     )
     messages = [{"role": "system", "content": system_prompt}] + messages
     plan = get_gpt_answer(messages)
     try:
         plan_data = json.loads(plan)
-        if isinstance(plan_data, list) and all(isinstance(item, dict) for item in plan_data):
-            return plan_data
-        else:
-            return [{"title": str(item), "text": "", "image": ""} for item in plan_data]
+        if isinstance(plan_data, list):
+            slides = []
+            for item in plan_data:
+                slides.append({
+                    "title": str(item.get("title", "")),
+                    "text": str(item.get("text", "")),
+                    "image": str(item.get("image", "")),
+                })
+            return slides
+        return []
     except Exception:
-        return [{"title": line.strip(), "text": "", "image": ""} for line in plan.split('\n') if line.strip()]
+        return []
+
+def validate_plan(plan):
+    if not isinstance(plan, list):
+        return False
+    for slide in plan:
+        if not isinstance(slide, dict):
+            return False
+        if not all(k in slide for k in ("title", "text", "image")):
+            return False
+    return True
