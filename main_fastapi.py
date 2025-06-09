@@ -5,6 +5,7 @@ from services.chat_history import get_history, add_message, clear_history
 from services.gpt_service import get_gpt_plan
 from services.pptx_service import make_pptx_file, pptx_to_png
 from services.file_service import save_last_pptx_path, get_last_pptx_path, clear_last_pptx_path
+from services.file_cleanup import cleanup_presentation_files
 import os
 import uuid
 import base64
@@ -66,17 +67,14 @@ def download_last_pptx():
     pptx_path = get_last_pptx_path()
     if pptx_path and os.path.exists(pptx_path):
         clear_last_pptx_path()
+        pres_id = pptx_path.replace("presentation_", "").replace(".pptx", "")
         response = FileResponse(
             path=pptx_path,
             filename="presentation.pptx",
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
         )
-        # def cleanup():
-        #     try:
-        #         os.remove(pptx_path)
-        #     except Exception:
-        #         pass
-        # import threading
-        # threading.Thread(target=cleanup).start()
+        # Удаляем pptx и PNG после скачивания (асинхронно)
+        import threading
+        threading.Thread(target=cleanup_presentation_files, args=(pres_id,)).start()
         return response
     return JSONResponse({"error": "Файл не найден"}, status_code=404)

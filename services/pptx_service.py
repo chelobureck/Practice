@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import uuid
 import base64
+from services.file_cleanup import cleanup_presentation_files
 
 app = FastAPI()
 
@@ -57,21 +58,18 @@ async def generate_presentation(request: Request):
     if not pptx_code:
         return JSONResponse({"error": "No pptx code provided"}, status_code=400)
 
-    # Генерируем pptx-файл
-    filename = f"presentation_{uuid.uuid4().hex}.pptx"
+    pres_id = uuid.uuid4().hex
+    filename = f"presentation_{pres_id}.pptx"
     pptx_path = make_pptx_file(pptx_code, filename)
 
-    # Генерируем PNG-слайды
-    png_dir = f"png_{uuid.uuid4().hex}"
+    png_dir = f"png_{pres_id}"
     os.makedirs(png_dir, exist_ok=True)
     png_files = pptx_to_png(pptx_path, png_dir)
     images = []
     for png_file in png_files:
         with open(png_file, "rb") as f:
             images.append("data:image/png;base64," + base64.b64encode(f.read()).decode())
-    # Очистка временных файлов (по желанию)
-    for f in png_files:
-        os.remove(f)
-    os.rmdir(png_dir)
-    os.remove(pptx_path)
+    # Удаляем файлы после генерации (асинхронно)
+    import threading
+    threading.Thread(target=cleanup_presentation_files, args=(pres_id,)).start()
     return JSONResponse({"images": images})
